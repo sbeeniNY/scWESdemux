@@ -1,5 +1,5 @@
 # scWESdemux_SarekSoup
-## WES -> nf-core/sarek (Multi-caller Consensus) -> Souporcell (v4)
+## WES -> nf-core/sarek (Multi-caller Consensus) -> Souporcell
 
 **WES-guided demultiplexing for pooled single-cell RNA-seq using nf-core/sarek, multi-caller consensus variants, and Souporcell.**
 
@@ -99,13 +99,29 @@ Required reference inputs are configured in `config/config.yaml`.
    Use the same reference build and chromosome naming convention for WES and scRNA-seq. For Cell Ranger BAMs, this usually means using the FASTA from the matching Cell Ranger reference directory.
 
 2. **WES target BED file**  
-   For WES data, provide the target BED file used by the capture panel. The original implementation used the Twist Bioscience Human Comprehensive Exome covered targets BED for hg38.
+   For WES data, provide the target BED file used by the capture panel. e.g. The original implementation used the Twist Bioscience Human Comprehensive Exome covered targets BED for hg38.
+    ```bash
+    wget -O Twist_Comprehensive_Exome_Covered_Targets_hg38.bed \
+    "https://www.twistbioscience.com/content/dam/twistbioscience/resources/2024-09/Twist_Comprehensive_Exome_Covered_Targets_hg38.bed"
+    ```
 
 3. **Common variants panel**  
    A genome-wide common SNP panel is used by Souporcell through `--common_variants`. The original implementation used the cellSNP-lite 1000 Genomes Phase 3 common SNP list for hg38 with chr-prefixed chromosomes.
+   
+   ```bash
+   cd /path/to/ref
+   wget https://sourceforge.net/projects/cellsnp/files/SNPlist/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz
+   ```
 
 4. **Souporcell container**  
    Provide a Singularity/Apptainer image path in `config/config.yaml`.
+
+    ```bash
+    # ml singularity/3.11.0
+    singularity pull \
+        /path/to/ref/souporcell_latest.sif \
+        docker://shubhamchandak94/souporcell:latest
+    ```
 
 ---
 
