@@ -1,0 +1,131 @@
+# =============================================================================
+# Snakemake config: nf-core/sarek (multi-caller consensus) -> Souporcell  (v4)
+# All paths and parameters are managed here. Do NOT hardcode in rule files.
+#
+# This is a TEMPLATE. Replace every /path/to/... placeholder with a real path
+# on your system, and edit the donor / pool definitions to match your study.
+# =============================================================================
+
+# ============================================================
+# 1. Reference genome (GRCh38)
+# ============================================================
+# Use the SAME FASTA for WES (sarek) and scRNA-seq (Cell Ranger) so that
+# chromosome naming is consistent. For Cell Ranger BAMs this is usually the
+# FASTA inside the matching Cell Ranger reference directory.
+reference:
+  genome: "/path/to/reference/refdata-gex-GRCh38-2024-A/fasta/genome.fa"
+
+# ============================================================
+# 2. nf-core/sarek output directory (Part 1: WES variant calling)
+# ============================================================
+sarek_outdir: "/path/to/output/sarek_results"
+
+# ============================================================
+# 3. Multi-caller consensus settings (Part 2: VCF processing)
+# ============================================================
+# Caller directory names as they appear in sarek output:
+#   sarek --tools "deepvariant,freebayes,haplotypecaller"
+#   outputs to:    deepvariant/  freebayes/  haplotypecaller/
+callers:
+  - deepvariant
+  - freebayes
+  - haplotypecaller
+
+# Genotypes are taken from this caller at consensus sites.
+# HaplotypeCaller benefits most from BQSR and produces well-calibrated GTs.
+primary_caller: "haplotypecaller"
+
+# Minimum number of callers that must call a site to include it.
+# 2 = moderate consensus (recommended); 1 = union of all callers.
+min_caller_support: 2
+
+# ============================================================
+# 4. VCF quality filter (toggle for comparison)
+# ============================================================
+# When enabled, applies PASS + QUAL >= qual_min before Souporcell.
+# Set enabled: false to run Souporcell on unfiltered consensus VCF.
+vcf_filter:
+  enabled: true
+  qual_min: 20
+
+# ============================================================
+# 5. Informative site filter (per-pool donor-discriminating sites only)
+# ============================================================
+# When enabled, removes sites where all pool donors share the same genotype.
+# These sites have zero discriminating power for demultiplexing.
+# Set enabled: false to pass all consensus sites to Souporcell.
+informative_filter:
+  enabled: true
+
+# ============================================================
+# 6. Souporcell container & common variants
+# ============================================================
+souporcell:
+  sif: "/path/to/containers/souporcell_latest.sif"
+  threads: 8
+  # 1000 Genomes common SNPs (MAF > 5%, hg38, chr-prefixed).
+  # IMPORTANT: --common_variants and --known_genotypes are MUTUALLY EXCLUSIVE
+  # in Souporcell. When common_variants is set, Souporcell runs in de novo mode
+  # (genome-wide variant discovery). Cluster-to-donor matching is done post-hoc
+  # via genotype concordance against the WES donor VCF (assign_clusters.py).
+  # Download: see README "Reference files > Common variants panel".
+  # Set to "" to disable (WES-only known_genotypes mode, not recommended).
+  common_variants: "/path/to/common_variants/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz"
+  extra: "--skip_remap TRUE"
+
+# ============================================================
+# 7. WES samples (per-donor FASTQ)
+# ============================================================
+# Donor IDs here MUST match the donor IDs used in the pools and sample_labels
+# sections below, and in sarek/samplesheet.csv.
+wes_samples:
+  DonorA:
+    R1: "/path/to/wes_fastqs/DonorA_R1_001.fastq.gz"
+    R2: "/path/to/wes_fastqs/DonorA_R2_001.fastq.gz"
+  DonorB:
+    R1: "/path/to/wes_fastqs/DonorB_R1_001.fastq.gz"
+    R2: "/path/to/wes_fastqs/DonorB_R2_001.fastq.gz"
+  DonorC:
+    R1: "/path/to/wes_fastqs/DonorC_R1_001.fastq.gz"
+    R2: "/path/to/wes_fastqs/DonorC_R2_001.fastq.gz"
+  DonorD:
+    R1: "/path/to/wes_fastqs/DonorD_R1_001.fastq.gz"
+    R2: "/path/to/wes_fastqs/DonorD_R2_001.fastq.gz"
+  DonorE:
+    R1: "/path/to/wes_fastqs/DonorE_R1_001.fastq.gz"
+    R2: "/path/to/wes_fastqs/DonorE_R2_001.fastq.gz"
+
+# ============================================================
+# 8. scRNA-seq pools (Cell Ranger output + pool -> donor mapping)
+# ============================================================
+# cellranger_dir points to the Cell Ranger `outs/` directory. The pipeline reads
+# the per-sample BAM and the filtered barcode list from inside it.
+pools:
+  Pool1:
+    cellranger_dir: "/path/to/cellranger/Pool1/outs"
+    donors: ["DonorA", "DonorB"]
+    n_donor: 2
+  Pool2:
+    cellranger_dir: "/path/to/cellranger/Pool2/outs"
+    donors: ["DonorC", "DonorD", "DonorE"]
+    n_donor: 3
+
+# ============================================================
+# 9. Donor-to-label mapping (pool donor -> final sample label)  [optional]
+# ============================================================
+# Maps each donor in a pool to a final human-readable label (e.g. timepoint).
+# Used only to add a `sample_label` column to clusters_with_samples.tsv.
+# Leave a pool out or use {} if you do not need custom labels.
+sample_labels:
+  Pool1:
+    DonorA: "DonorA_Day0"
+    DonorB: "DonorB_Day7"
+  Pool2:
+    DonorC: "DonorC_Day0"
+    DonorD: "DonorD_Day7"
+    DonorE: "DonorE_Day28"
+
+# ============================================================
+# 10. Output directory
+# ============================================================
+output_dir: "/path/to/output/demux_result"

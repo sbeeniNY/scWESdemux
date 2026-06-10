@@ -1,0 +1,30 @@
+"""
+Snakemake pipeline — Part 2:
+  Multi-caller consensus VCFs (from nf-core/sarek) -> per-pool Souporcell -> summary.
+
+Part 1 (sarek) must complete first; see sarek/run_sarek.sh.
+All paths/parameters are managed in config/config.yaml.
+"""
+
+import os
+
+configfile: "config/config.yaml"
+
+OUTDIR = config["output_dir"]
+WES_SAMPLES = list(config["wes_samples"].keys())
+POOLS = list(config["pools"].keys())
+SAREK_OUT = config["sarek_outdir"]
+FILTER_ENABLED = config["vcf_filter"]["enabled"]
+
+include: "rules/vcf_consensus.smk"
+include: "rules/vcf_merge.smk"
+include: "rules/demux.smk"
+
+rule all:
+    input:
+        os.path.join(OUTDIR, "vcf/cohort.consensus.vcf.gz"),
+        expand(
+            os.path.join(OUTDIR, "demux/{pool}/souporcell/clusters.tsv"),
+            pool=POOLS,
+        ),
+        os.path.join(OUTDIR, "demux/demux_summary.tsv"),

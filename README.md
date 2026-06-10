@@ -130,11 +130,11 @@ Example pool configuration:
 ```yaml
 pools:
   Pool1:
-    cellranger_outs: "/path/to/Pool1/cellranger/outs"
+    cellranger_dir: "/path/to/Pool1/cellranger/outs"
     donors: ["DonorA", "DonorB", "DonorC"]
     n_donor: 3
   Pool2:
-    cellranger_outs: "/path/to/Pool2/cellranger/outs"
+    cellranger_dir: "/path/to/Pool2/cellranger/outs"
     donors: ["DonorD", "DonorE"]
     n_donor: 2
 ```
@@ -256,32 +256,58 @@ When enabled, the per-pool donor VCF keeps only sites where at least one donor d
 
 ```yaml
 souporcell:
+  sif: "/path/to/containers/souporcell_latest.sif"
+  threads: 8
   common_variants: "/path/to/genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz"
-  skip_remap: true
+  extra: "--skip_remap TRUE"   # passed verbatim to souporcell_pipeline.py
 ```
 
 `--common_variants` and `--known_genotypes` are mutually exclusive in Souporcell. `scWESdemux` therefore uses Souporcell common-variants mode for de novo clustering, then maps clusters to donor IDs after the run.
 
 ## Outputs
 
-```text
+```
 {output_dir}/
 ├── vcf/
 │   ├── per_sample/
-│   │   └── {sample}.consensus.vcf.gz
-│   ├── cohort.consensus.vcf.gz
-│   └── cohort.pass.vcf.gz
+│   │   └── {sample}.consensus.vcf.gz       # per-sample multi-caller consensus
+│   ├── cohort.consensus.vcf.gz             # merged consensus (all donors)
+│   └── cohort.pass.vcf.gz                  # QUAL>=20 filtered (if enabled)
 ├── demux/
 │   ├── {pool}/
-│   │   ├── donor_genotype.vcf.gz
+│   │   ├── donor_genotype.vcf.gz           # per-pool donor subset (+ .tbi)
 │   │   └── souporcell/
-│   │       ├── clusters.tsv
-│   │       ├── cluster_genotypes.vcf
-│   │       ├── donor_assignment_report.tsv
-│   │       └── ambient_rna.txt
-│   └── demux_summary.tsv
-└── sarek_results/
+│   │       ├── clusters.tsv                # barcode -> assignment (final, post-troublet)
+│   │       ├── clusters_with_samples.tsv   # clusters.tsv + donor_id + sample_label columns
+│   │       ├── cluster_genotypes.vcf       # Souporcell-inferred cluster genotypes
+│   │       ├── donor_genotype.vcf          # decompressed per-pool donor VCF
+│   │       ├── ambient_rna.txt             # estimated ambient RNA fraction
+│   │       ├── donor_assignment_report.tsv # concordance matrix (common_variants mode ONLY)
+│   │       ├── clusters_tmp.tsv            # Souporcell internal (pre-troublet)
+│   │       ├── common_variants_covered.vcf # Souporcell internal (covered sites)
+│   │       ├── alt.mtx / ref.mtx           # vartrix allele-count matrices
+│   │       ├── barcodes.tsv                # barcodes used
+│   │       ├── depth_merged.bed            # per-site depth
+│   │       ├── vartrix.out                 # vartrix log
+│   │       ├── *.done                      # stage marker files
+│   │       └── logs/                       # per-stage logs
+│   └── demux_summary.tsv                   # cohort-wide summary
+└── sarek_results/                          # nf-core/sarek output tree
 ```
+
+**Key per-pool files:**
+
+- **`clusters_with_samples.tsv`** — the human-readable demux result. It is
+  `clusters.tsv` plus two added columns (`sample_assignment` = donor ID,
+  `sample_label` = final label from `config.yaml > sample_labels`). Written by
+  `demux_summary.py` for every pool.
+- **`clusters.tsv`** — raw Souporcell output. In **common_variants mode** the
+  `assignment` column is rewritten from numeric cluster IDs to donor names by
+  `assign_clusters.py`. In **known_genotypes mode** Souporcell writes the
+  assignment directly.
+- **`donor_assignment_report.tsv`** — cluster-to-donor concordance matrix. Only
+  produced in **common_variants mode** (it is the output of `assign_clusters.py`).
+  Absent in known_genotypes (WES-only) runs.
 
 The top-level summary file reports donor-level demultiplexing metrics:
 

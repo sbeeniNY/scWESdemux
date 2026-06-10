@@ -1,0 +1,15 @@
+# Run logs
+sarek/run_sarek_*.log
+logs/
+.nextflow*
+work/
+
+# Snakemake
+.snakemake/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store

@@ -1,0 +1,6 @@
+patient,sample,lane,fastq_1,fastq_2
+DonorA,DonorA,lane1,/path/to/wes_fastqs/DonorA_R1_001.fastq.gz,/path/to/wes_fastqs/DonorA_R2_001.fastq.gz
+DonorB,DonorB,lane1,/path/to/wes_fastqs/DonorB_R1_001.fastq.gz,/path/to/wes_fastqs/DonorB_R2_001.fastq.gz
+DonorC,DonorC,lane1,/path/to/wes_fastqs/DonorC_R1_001.fastq.gz,/path/to/wes_fastqs/DonorC_R2_001.fastq.gz
+DonorD,DonorD,lane1,/path/to/wes_fastqs/DonorD_R1_001.fastq.gz,/path/to/wes_fastqs/DonorD_R2_001.fastq.gz
+DonorE,DonorE,lane1,/path/to/wes_fastqs/DonorE_R1_001.fastq.gz,/path/to/wes_fastqs/DonorE_R2_001.fastq.gz
